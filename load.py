@@ -16,6 +16,10 @@ def Download():
             os.remove(os.path.join(root, name))
         for name in dirs:
             os.rmdir(os.path.join(root, name))
+    
+    # Create directory if not exists
+    if not os.path.exists("./data/"):
+        os.mkdir("./data/")
 
     # Download Flickr8k
     logger.PrintDebug("Downloading Flickr8k Text...")

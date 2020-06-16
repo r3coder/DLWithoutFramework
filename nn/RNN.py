@@ -1,4 +1,5 @@
 import numpy as np
+import cupy as cp
 
 class RNN:
     def __init__(self, input_size, hidden_size, output_size):

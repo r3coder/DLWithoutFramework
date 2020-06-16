@@ -74,7 +74,10 @@ class Model:
 
     
 import numpy as np
-l1 = np.random.uniform(0, 1, (3,64,64))
-l2 = np.random.uniform(-1, 1, (39,300))
+import cupy as cp
+l1 = np.random.uniform(0, 1, (32, 3, 64, 64))
+l2 = np.random.uniform(-1, 1, (32, 39, 300))
 m = Model(300)
-logger.PrintDebug(str(m.Forward(l1, l2)))
+# logger.PrintDebug(str(m.Forward(l1, l2)))
+m.Forward(l1, l2)
+

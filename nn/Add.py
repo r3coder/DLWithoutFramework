@@ -1,5 +1,5 @@
 import numpy as np
-
+import cupy as cp
 
 class Add:
     def __init__(self, shape):
