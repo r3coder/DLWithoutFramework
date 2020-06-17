@@ -14,6 +14,9 @@ from nn.Add import Add
 from nn.MaxPool2d import MaxPool2d
 from nn.Flatten import Flatten
 
+import nn.Functions as F
+
+import numpy as np
 
 class Model:
     def __init__(self, output_size):
@@ -35,7 +38,7 @@ class Model:
         self.cf = []
         self.cf.append(Concat())
         self.cf.append(Flatten())
-        self.cf.append(Linear(1176,1000))
+        self.cf.append(Linear(1960,1000))
         self.cf.append(ReLU())
         self.cf.append(Linear(1000,500))
         self.cf.append(ReLU())
@@ -45,55 +48,76 @@ class Model:
     def Forward(self, input_image):
         for i in range(len(self.cnn)):
             input_image = self.cnn[i].Forward(input_image)
+            if i == 8:
+                input_2 = input_image
             # logger.PrintDebug("CNN " + str(i) + " " + str(input_image.shape))
+        input_image = (input_image, input_2)
+        for i in range(len(self.cf)):
+            input_image = self.cf[i].Forward(input_image)
+            # logger.PrintDebug("CF " + str(i) + " " + str(input_image.shape))
         return input_image
-
+    
+    def Backward(self, error):
+        for i in range(len(self.cf)-1, 0, -1):
+            error = self.cf[i].Backward(error)
+            logger.PrintDebug("CF " + str(i) + " " + str(error.shape))
+        error, error2 = self.cf[0].Backward(error)
+        logger.PrintDebug("CF 0 " + str(error.shape) + str(error2.shape))
+        for i in range(len(self.cnn)-1, -1, -1):
+            error = self.cnn[i].Backward(error)
+            logger.PrintDebug("CNN " + str(i) + " " + str(error.shape))
 import gzip
 import os
+import sys
 from urllib import request
-import numpy as np
 
 
-def LoadLabel(loc):
-    logger.PrintDebug("Loading label data from "+loc)
+# Load data
+def LoadRawData(loc):
+    logger.PrintDebug("Loading data from "+loc)
     with gzip.open(loc,'rb') as f:
         raw = f.read()
-        if int.from_bytes(raw[:4], byteorder='big') != 2049: # Simple data verification
-            return -1
-        nImages = int.from_bytes(raw[4:8],byteorder='big')
-        res = np.zeros((nImages),dtype=np.int32)
-        for imageIdx in range(nImages):
-            res[imageIdx] = int(raw[8+imageIdx])
-    logger.PrintDebug("Total "+str(nImages)+" Labels loaded")
-    return res
- 
-
-# Load image with simple normalization (0 to 1)
-def LoadImage(loc):
-    logger.PrintDebug("Loading image data from "+loc)
-    with gzip.open(loc,'rb') as f:
-        raw = f.read()
-        if int.from_bytes(raw[:4], byteorder='big') != 2051: # Simple data verification
-            return -1
-        nImages = int.from_bytes(raw[4:8],byteorder='big')
-        rows = int.from_bytes(raw[8:12],byteorder='big')
-        cols = int.from_bytes(raw[12:16],byteorder='big')
-        res = np.zeros((nImages,1 , rows, cols))
+        if int.from_bytes(raw[:4], byteorder='big') == 2051:
+            # This is image file
+            nImages = int.from_bytes(raw[4:8],byteorder='big')
+            rows = int.from_bytes(raw[8:12],byteorder='big')
+            cols = int.from_bytes(raw[12:16],byteorder='big')
+            res = np.zeros((nImages,1 , rows, cols))
         
-        for imageIdx in range(nImages):
-            for rowIdx in range(rows):
-                for colIdx in range(cols):
-                    res[imageIdx,0,rowIdx,colIdx] = int(raw[16+imageIdx*rows*cols+rowIdx*cols+colIdx]) / 255.0
-            if imageIdx % 10000 == 9999 and imageIdx + 1 != nImages:
-                logger.PrintDebug("  "+str(imageIdx + 1)+" Images loaded")
-    logger.PrintDebug("Total "+str(nImages)+" Images loaded")
+            for imageIdx in range(nImages):
+                for rowIdx in range(rows):
+                    for colIdx in range(cols):
+                        res[imageIdx,0,rowIdx,colIdx] = int(raw[16+imageIdx*rows*cols+rowIdx*cols+colIdx]) / 255.0
+                if imageIdx % 10000 == 9999 and imageIdx + 1 != nImages:
+                    logger.PrintDebug("  "+str(imageIdx + 1)+" Images loaded",end='\r')
+            logger.PrintDebug("Total "+str(nImages)+" Images loaded")
+        elif int.from_bytes(raw[:4], byteorder='big') == 2049:
+            # This is label file
+            nImages = int.from_bytes(raw[4:8],byteorder='big')
+            res = np.zeros((nImages),dtype=np.int32)
+            for imageIdx in range(nImages):
+                res[imageIdx] = int(raw[8+imageIdx])
+            logger.PrintDebug("Total "+str(nImages)+" Labels loaded")
+        else:
+            logger.PrintDebug("File is not a MNIST image or label file.",col="r")
+            return -1
     return res 
 
+def LoadData(loc, rawloc):
+    if not os.path.exists(loc + ".npy"):
+        res = LoadRawData(rawloc)
+        np.save(loc, res)
+    else:
+        res = np.load(loc + ".npy")
+        logger.PrintDebug("Loaded " + loc + ".npy")
+    return res
 
 if __name__ == "__main__":
     logger.PrintDebug("Simple CNN Network Training",col='b')
 
     np.set_printoptions(precision=3)
+    np.set_printoptions(suppress=True)
+    # np.set_printoptions(threshold=sys.maxsize)
     # Download data if not exists
     locData = "./data_mnist/"
     url = "http://yann.lecun.com/exdb/mnist/"
@@ -111,13 +135,13 @@ if __name__ == "__main__":
         request.urlretrieve(url + locTestLabel, locData + locTestLabel )
     if not os.path.exists(locData + locTestData):
         request.urlretrieve(url + locTestData, locData + locTestData )
-    logger.PrintDebug("Data Download / Verify Complete", col='g')
+    logger.PrintDebug("Raw Data file checked", col='g')
 
     # Load test/train data/labels
-    trainData = LoadImage(locData + locTrainData)
-    testData = LoadImage(locData + locTestData)
-    trainLabel = LoadLabel(locData + locTrainLabel)
-    testLabel = LoadLabel(locData + locTestLabel)
+    trainData = LoadData(locData + "train_images", locData + locTrainData)
+    testData = LoadData(locData + "test_images", locData + locTestData)
+    trainLabel = LoadData(locData + "train_labels", locData + locTrainLabel)
+    testLabel = LoadData(locData + "test_labels", locData + locTestLabel)
     if trainData.shape[0] != trainLabel.shape[0]:
         logger.PrintDebug("ERROR: Train data/label count mismatch",col='r')
         sys.exit(0)
@@ -131,27 +155,41 @@ if __name__ == "__main__":
     
     batchSize = 32
     learningRate = 0.001
-    numEpochs = 10
-    trainDataCount = trainLabel.shape[0]
-    testDataCount = testLabel.shape[0]
-
+    numEpochs = 5
+    trainDataCount = trainData.shape[0]
+    testDataCount = testData.shape[0]
+    batchCount = trainDataCount // batchSize
+    
     # Training starting!
     logger.PrintDebug("   Training Start!   ", bg='r') 
-    
-    trainIdx = np.arange(trainLabel.shape[0])
+    trainIdx = np.arange(trainData.shape[0])
+    batchData = np.zeros((batchSize, trainData.shape[1], trainData.shape[2], trainData.shape[3]))
+    batchLabel = np.zeros(batchSize, dtype=int)
     
     for epoch in range(numEpochs):
+        logger.PrintDebug("   Epoch " + str(epoch+1) + "   ", col='k',bg='w') 
         # Shuffle image index
         np.random.shuffle(trainIdx)
 
-        for batchIdx in range(
-        # Load 1 batch
-        batchData = trainData[0:32,:,:]
-        batchLabel
-        # Forward the batch
-        m.Forward(batch)
+        for batchIdx in range(batchCount):
+            for i in range(batchSize):
+                batchData[i] = trainData[trainIdx[i+batchIdx*batchSize]]
+                batchLabel[i] = trainLabel[trainIdx[i+batchIdx*batchSize]]
+            
+            result = m.Forward(batchData)
+            loss, _ = F.CrossEntropyLossBatch(result, batchLabel)
+            
+            answer = F.OneHotVectorBatch(batchLabel) # Get One-hot vector
+            m.Backward(result - answer) # Backward propagation of the error
+            
 
-        # Get Error and add gradients
-
-        # backward pass
-
+            # Print stuff
+            logger.PrintDebug(str("(E%2d/%2d|B%4d/%4d)(%5.1f|%5.1f) Loss : %.3f" \
+                    %(epoch+1,numEpochs,batchIdx+1,batchCount, \
+                    float(100*(epoch/numEpochs+(batchIdx+1)/batchCount/numEpochs)), \
+                    float(100*(batchIdx+1)/batchCount), loss)),end = '\r') 
+        # Evaluate data
+        result = m.Forward(testData)
+        
+        logger.PrintDebug("   Epoch " + str(epoch+1) + " Finish   ", col='k',bg='g') 
+    logger.PrintDebug("   Training Finish!   ", bg='r') 

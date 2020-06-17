@@ -12,29 +12,24 @@ class Conv2d:
         # Gradient
         self.g = np.zeros((out_channels, in_channels, kernel_size[0], kernel_size[1]))
         # values
-        self.v = np.zeros((out_channels, 1, 1))
+        self.v = np.zeros(1)
         # values
         self.padding = padding
         self.stride = stride
         self.kernel_size = kernel_size
+        self.in_channels = in_channels
+        self.out_channels = out_channels
 
     def Forward(self, x):
-        self.v = np.zeros((self.k.shape[0], x.shape[1], x.shape[2]))
-        x_ = np.zeros((x.shape[0], x.shape[1]+self.padding*2, x.shape[2]+self.padding*2))
-        for i in range(x.shape[0]):
-            x_ = np.pad(x[i], (self.padding, self.padding), mode='constant', constant_values=(0))
-        # x_ = cp.array(x_)
-        for io in range(self.k.shape[0]): # Output size
-            for ii in range(self.k.shape[1]): # Input size
-                for i1 in range(x.shape[1]):
-                    for i2 in range(x.shape[2]):
-                        # self.v[io][i1][i2] += cp.sum(cp.multiply(self.k[io][ii], x_[i1:i1+self.kernel_size[0],i2:i2+self.kernel_size[0]]))
-                        self.v[io][i1][i2] += np.sum(np.multiply(self.k[io][ii], x_[i1:i1+self.kernel_size[0],i2:i2+self.kernel_size[0]]))
-        # return cp.asnumpy(self.v)
+        if self.v.shape != (x.shape[0], self.k.shape[0], x.shape[2], x.shape[3]):
+            self.v = np.zeros((x.shape[0], self.k.shape[0], x.shape[2], x.shape[3]))
+        x_ = np.pad(x,((0,0),(0,0),(1,1),(1,1)), mode='constant', constant_values=(0))
+        for ib in range(x.shape[0]):
+            for io in range(self.k.shape[0]): # Output size
+                for i1 in range(x.shape[2]):
+                    for i2 in range(x.shape[3]):
+                        self.v[ib,io,i1,i2] = np.sum(np.multiply(self.k[io,:], x_[ib,:,i1:i1+self.kernel_size[0],i2:i2+self.kernel_size[0]]))
         return self.v
 
-    def GradAdd(self, x):
-        pass
-
     def Backward(self, x):
-        pass
+        return np.zeros((x.shape[0], self.in_channels, x.shape[2], x.shape[3]))

@@ -77,7 +77,7 @@ class Logger:
     def __init__(self):
         self.timeInit = datetime.now().timestamp()
 
-    def PrintDebug(self, msg, current = True, elapsed = True, col='', bg=''):
+    def PrintDebug(self, msg, current = True, elapsed = True, col='', bg='', end = '\n'):
         t = ""
         if current:
             t += str(datetime.now())[5:-3]
@@ -100,7 +100,7 @@ class Logger:
             t += bCol[bg]
 
         t += msg + rCol
-
-        print(t)
+        e = end
+        print(t, end = e)
 
 logger = Logger()

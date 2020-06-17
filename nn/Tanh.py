@@ -9,9 +9,6 @@ class Tanh:
         self.v = np.tanh(x)
         return self.v
     
-    def GradAdd(self, x):
-        pass
-
     def Backward(self, x):
-        pass
+        return x
     

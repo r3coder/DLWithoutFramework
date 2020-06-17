@@ -9,9 +9,6 @@ class ReLU:
         self.v = np.maximum(x, 0)
         return self.v
     
-    def GradAdd(self, x):
-        pass
-
     def Backward(self, x):
-        pass
+        return x # Do something??
     

@@ -6,14 +6,14 @@ class Softmax:
         self.v = np.zeros(1)
     
     def Forward(self, x):
-        x1 = np.exp(x)
-        s = np.sum(x1)
-        self.v = x1 / s
+        if self.v.shape != x.shape:
+            self.v = np.zeros(x.shape)
+        for i in range(x.shape[0]):
+            x_ = x[i]
+            x_ = np.exp(x_ - np.amax(x_))
+            self.v[i] = x_ / np.sum(x_)
         return self.v
     
-    def GradAdd(self, x):
-        pass
-
     def Backward(self, x):
-        pass
+        return x
     

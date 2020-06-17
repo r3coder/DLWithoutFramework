@@ -45,7 +45,7 @@ class Model:
         self.emb.append(RNN(output_size, 256, 256))
 
         self.linear = [] # concat and linear
-        self.linear.append(Add(256))
+        self.linear.append(Add())
         self.linear.append(Linear(256,256))
         self.linear.append(ReLU())
         self.linear.append(Linear(256,output_size))

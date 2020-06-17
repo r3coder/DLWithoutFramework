@@ -18,9 +18,6 @@ class RNN:
 
     def Forward(self, x):
         return self.v
-    
-    def GradAdd(self, x):
-        pass
 
     def Backward(self, x):
         pass
