@@ -23,3 +23,5 @@ class RNN:
         pass
     
 
+    def Info(self):
+        return "RNN"

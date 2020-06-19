@@ -76,6 +76,18 @@ class Logger:
 
     def __init__(self):
         self.timeInit = datetime.now().timestamp()
+    
+    def GetCurrentTime(self):
+        return str(datetime.now())[5:-3]
+
+    def GetElapsedTime(self):
+        et = datetime.now().timestamp() - self.timeInit
+        etMS = int(et * 1000) % 1000
+        etS = int(et % 60)
+        etM = int((et / 60) % 60)
+        etH = int(et / 3600)
+        return "%02d:%02d:%02d.%3d"%(etH,etM,etS,etMS)
+
 
     def PrintDebug(self, msg, current = True, elapsed = True, col='', bg='', end = '\n'):
         t = ""
@@ -83,12 +95,7 @@ class Logger:
             t += str(datetime.now())[5:-3]
         
         if elapsed:
-            et = datetime.now().timestamp() - self.timeInit
-            etMS = int(et * 1000) % 1000
-            etS = int(et % 60)
-            etM = int((et / 60) % 60)
-            etH = int(et / 3600)
-            t += "[%02d:%02d:%02d.%3d]"%(etH,etM,etS,etMS)
+            t += "[" + self.GetElapsedTime() + "]"
         
         if current or elapsed:
             t += ":"

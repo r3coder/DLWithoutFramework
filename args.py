@@ -12,10 +12,16 @@ def parse():
             help = "Download Data if true. Data will download if verifing fails")
     parser.add_argument("-e","--epoch", type=int, default=10,
             help = "Training epochs")
+    parser.add_argument("-bs","--batch-size", type=int, default=32,
+            help = "Batch Size")
     parser.add_argument("-lr","--learning-rate", type=float, default=0.001,
             help = "Learning rate")
     parser.add_argument("-ws", "--word-embedding-size", type=int, choices=[50,100,200,300],default=300,
             help = "Size of the word embedding vector")
+    parser.add_argument("-l","--log", type=str2bool, default=False,
+            help = "Left log file if true. It is saved on ./logs/") 
+    parser.add_argument("-m","--model", type=str, default = "",
+            help = "Model to train, leave blank for Basic")
     """
     parser.add_argument("-i","--int", type=int, choices=[0,1,2], default=1,
             help = "Integer with choices")

@@ -1,5 +1,6 @@
 
 from log import logger
+import args
 
 from nn.Linear import Linear
 from nn.Conv2d import Conv2d
@@ -18,54 +19,125 @@ import nn.Functions as F
 
 import numpy as np
 
+#LeeNetL : Linear Only Model 
+class LeeNetL:
+    def __init__(self, output_size, lr=0.01):
+        self.cf = []
+        self.cf.append(Flatten())
+        self.cf.append(Linear(784,1000,lr=lr))
+        self.cf.append(ReLU())
+        self.cf.append(Linear(1000,1000,lr=lr))
+        self.cf.append(ReLU())
+        self.cf.append(Linear(1000,500,lr=lr))
+        self.cf.append(ReLU())
+        self.cf.append(Linear(500,256,lr=lr))
+        self.cf.append(ReLU())
+        self.cf.append(Linear(256,10,lr=lr))
+        self.cf.append(Softmax())
+
+    def Forward(self, input_image):
+        for i in range(len(self.cf)):
+            input_image = self.cf[i].Forward(input_image)
+        return input_image
+    
+    def Backward(self, error):
+        for i in range(len(self.cf)-1, -1, -1):
+            error = self.cf[i].Backward(error)
+    
+    def StrModelName(self):
+        return "LeeNetL"
+
+    def StrModelStructure(self):
+        a = ""
+        for i in range(len(self.cf)):
+            a += "%s"%(self.cf[i].Info()) + "\n"
+        return a
+
+# LeeNetv2 : At Least WORKING model for mnist
+class LeeNetv2:
+    def __init__(self, output_size, lr=0.005):
+        self.cf = []
+        self.cf.append(Conv2d(1,4,(3,3),lr=lr))
+        self.cf.append(ReLU())
+        self.cf.append(MaxPool2d())
+        self.cf.append(Conv2d(4,8,(3,3),lr=lr))
+        self.cf.append(ReLU())
+        self.cf.append(Flatten())
+        self.cf.append(Linear(784*2,1000,lr=lr))
+        self.cf.append(ReLU())
+        self.cf.append(Linear(1000,500,lr=lr))
+        self.cf.append(ReLU())
+        self.cf.append(Linear(500,256,lr=lr))
+        self.cf.append(ReLU())
+        self.cf.append(Linear(256,10,lr=lr))
+        self.cf.append(Softmax())
+
+    def Forward(self, input_image):
+        for i in range(len(self.cf)):
+            input_image = self.cf[i].Forward(input_image)
+        return input_image
+    
+    def Backward(self, error):
+        # a = "\n"
+        for i in range(len(self.cf)-1, -1, -1):
+            error = self.cf[i].Backward(error)
+            # if self.cf[i].isTrainable:
+                # a += "%30s"%(self.cf[i].Info()) + " " + str(np.sum(error)) + "\n"
+        # print(a,end="")
+
+    def StrModelName(self):
+        return "LeeNetv2"
+
+    def StrModelStructure(self):
+        a = ""
+        for i in range(len(self.cf)):
+            a += "%s"%(self.cf[i].Info()) + "\n"
+        return a
+
+# LeeNetv3 : Not that working, but structure is given by assignment
 class Model:
-    def __init__(self, output_size):
+    def __init__(self, output_size, lr=0.0001):
         self.cnn = []
-        self.cnn.append(Conv2d(1,4,(3,3)))      # 0
-        self.cnn.append(ReLU())                 # 1
-        self.cnn.append(MaxPool2d())            # 2
-        self.cnn.append(Conv2d(4,8,(3,3)))      # 3
-        self.cnn.append(ReLU())                 # 4
-        self.cnn.append(MaxPool2d())            # 5
-        self.cnn.append(Conv2d(8,16,(3,3)))     # 6
-        self.cnn.append(ReLU())                 # 7
-        self.cnn.append(Conv2d(16,16,(3,3)))    # 8
-        self.cnn.append(ReLU())                 # 9
-        self.cnn.append(Conv2d(16,24,(3,3)))    # 10
-        self.cnn.append(ReLU())                 # 11
-        
+        self.cnn.append(Conv2d(1,4,(3,3),lr=lr))    
+        self.cnn.append(ReLU())                     
+        self.cnn.append(MaxPool2d())                
+        self.cnn.append(Conv2d(4,8,(3,3),lr=lr))    
+        self.cnn.append(ReLU())                     
+        self.cnn.append(MaxPool2d())                
+        self.cnn.append(Conv2d(8,16,(3,3),lr=lr))   
+        self.cnn.append(ReLU())                     
+        self.cnn.append(Conv2d(16,16,(3,3),lr=lr))        
+        self.cnn.append(ReLU())                     
+        self.cnn.append(Conv2d(16,24,(3,3),lr=lr))        
+        self.cnn.append(Tanh())                     
 
         self.cf = []
         self.cf.append(Concat())
         self.cf.append(Flatten())
-        self.cf.append(Linear(1960,1000))
+        self.cf.append(Linear(1960,1000,lr=lr))
         self.cf.append(ReLU())
-        self.cf.append(Linear(1000,500))
+        self.cf.append(Linear(1000,500,lr=lr))
         self.cf.append(ReLU())
-        self.cf.append(Linear(500,10))
+        self.cf.append(Linear(500,10,lr=lr))
         self.cf.append(Softmax())
+
+        self.lr = lr
 
     def Forward(self, input_image):
         for i in range(len(self.cnn)):
             input_image = self.cnn[i].Forward(input_image)
             if i == 8:
                 input_2 = input_image
-            # logger.PrintDebug("CNN " + str(i) + " " + str(input_image.shape))
         input_image = (input_image, input_2)
         for i in range(len(self.cf)):
             input_image = self.cf[i].Forward(input_image)
-            # logger.PrintDebug("CF " + str(i) + " " + str(input_image.shape))
         return input_image
     
     def Backward(self, error):
         for i in range(len(self.cf)-1, 0, -1):
             error = self.cf[i].Backward(error)
-            logger.PrintDebug("CF " + str(i) + " " + str(error.shape))
         error, error2 = self.cf[0].Backward(error)
-        logger.PrintDebug("CF 0 " + str(error.shape) + str(error2.shape))
-        for i in range(len(self.cnn)-1, -1, -1):
-            error = self.cnn[i].Backward(error)
-            logger.PrintDebug("CNN " + str(i) + " " + str(error.shape))
+
 import gzip
 import os
 import sys
@@ -114,10 +186,14 @@ def LoadData(loc, rawloc):
 
 if __name__ == "__main__":
     logger.PrintDebug("Simple CNN Network Training",col='b')
-
+    # Parse args
+    args = args.parse()
+    
+    # Numpy options
     np.set_printoptions(precision=3)
     np.set_printoptions(suppress=True)
     # np.set_printoptions(threshold=sys.maxsize)
+    
     # Download data if not exists
     locData = "./data_mnist/"
     url = "http://yann.lecun.com/exdb/mnist/"
@@ -150,15 +226,50 @@ if __name__ == "__main__":
         sys.exit(0)
     logger.PrintDebug("Data Load Complete", col='g')
     
-    # Configurate model
-    m = Model(10)
     
-    batchSize = 32
-    learningRate = 0.001
-    numEpochs = 5
+    batchSize = args.batch_size
+    learningRate = args.learning_rate
+    numEpochs = args.epoch
+    
+    numClasses = 10
     trainDataCount = trainData.shape[0]
     testDataCount = testData.shape[0]
     batchCount = trainDataCount // batchSize
+    
+    # Configurate model
+    if args.model == "" or args.model == "LeeNetv2":
+        m = LeeNetv2(numClasses, lr=learningRate)
+    elif args.model == "LeeNetL":
+        m = LeeNetL(numClasses, lr=learningRate)
+    else:
+        logger.PrintDebug("ERROR: Unknown Model specification",col='r')
+        sys.exit(0)
+
+    # Forward Once for deciding model structure
+    m.Forward(trainData[0:1])
+    # Print Basic Information
+    logger.PrintDebug("   Model Specification   ",col="k", bg='y')
+    print(m.StrModelStructure())
+    logger.PrintDebug("   Training Specification   ",col="k", bg='y')
+    print("Batch Size : %d"%batchSize)
+    print("Learning Rate : %f"%learningRate)
+    print("numEpochs : %d"%args.epoch)
+    print("Training Data : MNIST")
+    print()
+
+    # Log file
+    if args.log:
+        modelName = m.StrModelName()
+        locLogFile = "./logs/log_" + modelName + ".txt"
+        if not os.path.exists("./logs"):
+            os.mkdir("./logs")
+        logFile = open(locLogFile,"w")
+        logger.PrintDebug("Recording log file at " + locLogFile)
+    
+        # Write basic informations
+        logFile.write(m.StrModelName() + "\n")
+        logFile.write(m.StrModelStructure() + "\n")
+        logFile.write("Start time : " + (logger.GetCurrentTime()) + "\n\n")
     
     # Training starting!
     logger.PrintDebug("   Training Start!   ", bg='r') 
@@ -171,6 +282,8 @@ if __name__ == "__main__":
         # Shuffle image index
         np.random.shuffle(trainIdx)
 
+        logger.PrintDebug("   Training   ", col='k',bg='b') 
+        # Batch Training for SGD
         for batchIdx in range(batchCount):
             for i in range(batchSize):
                 batchData[i] = trainData[trainIdx[i+batchIdx*batchSize]]
@@ -182,14 +295,37 @@ if __name__ == "__main__":
             answer = F.OneHotVectorBatch(batchLabel) # Get One-hot vector
             m.Backward(result - answer) # Backward propagation of the error
             
-
+            # sys.exit(0)
+            
             # Print stuff
+            if args.log:
+                logFile.write("%.4f\t"%loss)
             logger.PrintDebug(str("(E%2d/%2d|B%4d/%4d)(%5.1f|%5.1f) Loss : %.3f" \
                     %(epoch+1,numEpochs,batchIdx+1,batchCount, \
                     float(100*(epoch/numEpochs+(batchIdx+1)/batchCount/numEpochs)), \
                     float(100*(batchIdx+1)/batchCount), loss)),end = '\r') 
+            # print()    
+        print()
+        logger.PrintDebug("   Evaluating   ", col='k',bg='b') 
         # Evaluate data
         result = m.Forward(testData)
-        
+        confusionMatrix = np.zeros((numClasses, numClasses))
+        for ind, res in enumerate(result):
+            indx = np.where(res == res.max())
+            confusionMatrix[testLabel[ind], indx[1]] += 1
+        logger.PrintDebug("Confusion Matrix")
+        print(confusionMatrix)
+        correct = np.sum(np.diagonal(confusionMatrix))
+        logger.PrintDebug("Test Accuracy %d/%d"%(correct,testLabel.shape[0]))
+    if args.log:
+        logFile.write("\nConfusion Matrix\n"+str(confusionMatrix) +"\n\n")
+        logFile.write("Test Accuracy %d/%d\n"%(correct,testLabel.shape[0]))
+
+
         logger.PrintDebug("   Epoch " + str(epoch+1) + " Finish   ", col='k',bg='g') 
-    logger.PrintDebug("   Training Finish!   ", bg='r') 
+    logger.PrintDebug("   Training Finish!   ", bg='r')
+    if args.log:
+        logFile.write("Elapsed Time : " + logger.GetElapsedTime())
+        logFile.close()
+        logger.PrintDebug("Log file recorded to "+locLogFile) 
+    

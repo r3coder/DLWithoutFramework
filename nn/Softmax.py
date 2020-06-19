@@ -1,10 +1,12 @@
 import numpy as np
-import cupy as cp
 
 class Softmax:
     def __init__(self):
+        # Cache
         self.v = np.zeros(1)
-    
+        # Property
+        self.isTrainable = False
+
     def Forward(self, x):
         if self.v.shape != x.shape:
             self.v = np.zeros(x.shape)
@@ -17,3 +19,5 @@ class Softmax:
     def Backward(self, x):
         return x
     
+    def Info(self):
+        return "[ ]Softmax %s"%(str(self.v.shape))
