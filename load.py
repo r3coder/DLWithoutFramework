@@ -52,8 +52,21 @@ def Verify():
     logger.PrintDebug("Data Verified!")
     return True
 
+import pickle
+import os
+
 # Load glove6B data
 def glove6B(sz = 50, logDiv = 100000):
+    loc = "data/glove6B/glove6B%s" % str(sz) + ".dump"
+    if not os.path.exists(loc):
+        res = _glove6B(sz, logDiv)
+        pickle.dump(res, open(loc,'wb'))
+    else:
+        res = pickle.load(open(loc,'rb'))
+        logger.PrintDebug("Loaded " + loc)
+    return res
+
+def _glove6B(sz = 50, logDiv = 100000):
     d = dict()
     if sz not in [50, 100, 200, 300]:
         logger.PrintDebug("Not supported word embedding size, returning empty dict")

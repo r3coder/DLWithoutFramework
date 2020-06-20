@@ -2,16 +2,18 @@ import numpy as np
 import math
 
 
-def sigmoid(x):
+def Sigmoid(x):
     return 1/(1+np.exp(-x))
 
-def softmax(x):
-    x1 = np.exp(x)
-    s = np.sum(x1)
-    return x1 / s
+def Softmax(x):
+    x1 = np.exp(x - np.amax(x))
+    return x1 / np.sum(x1)
 
-def tanh(x):
+def Tanh(x):
     return np.tanh(x)
+
+def TanhD(x):
+    return np.multiply((1 - np.tanh(x)),(1 + np.tanh(x)))
 
 def OneHotVector(ind, sz=10):
     res = np.zeros(sz)

@@ -15,48 +15,65 @@ from nn.Add import Add
 from nn.MaxPool2d import MaxPool2d
 from nn.Flatten import Flatten
 
-import nn.Functions as F
 
 import numpy as np
 
-#RNNNet : RNN
-class RNNNet:
-    def __init__(self, output_size, lr=0.01):
-        self.cf = []
-        self.cf.append(Flatten())
-        self.cf.append(Linear(784,1000,lr=lr))
-        self.cf.append(ReLU())
-        self.cf.append(Linear(1000,1000,lr=lr))
-        self.cf.append(ReLU())
-        self.cf.append(Linear(1000,500,lr=lr))
-        self.cf.append(ReLU())
-        self.cf.append(Linear(500,256,lr=lr))
-        self.cf.append(ReLU())
-        self.cf.append(Linear(256,10,lr=lr))
-        self.cf.append(Softmax())
+# LeeNetR : RNN Net
+class LeeNetR:
+    def __init__(self, in_sz, hid_sz, out_sz, lr=0.01, dropout=True, dropout_rate=0.5):
+        self.rnn = RNN(in_sz, hid_sz, out_sz)
 
-    def Forward(self, input_image):
-        for i in range(len(self.cf)):
-            input_image = self.cf[i].Forward(input_image)
-        return input_image
+    def Forward(self, input_stream):
+        input_stream = self.rnn.Forward(input_stream)
+        return input_stream
     
     def Backward(self, error):
-        for i in range(len(self.cf)-1, -1, -1):
-            error = self.cf[i].Backward(error)
+        error = self.rnn.Backward(error)
     
     def StrModelName(self):
-        return "RNNNet"
+        return "LeeNetR"
 
     def StrModelStructure(self):
         a = ""
-        for i in range(len(self.cf)):
-            a += "%s"%(self.cf[i].Info()) + "\n"
+        a += "%s"%(self.rnn.Info()) + "\n"
         return a
 
 import gzip
 import os
 import sys
 from urllib import request
+import load
+import string
+
+def Load(loc, wordEmb, emb_size = 50):
+    res = []
+    table = str.maketrans(dict.fromkeys(string.punctuation))
+    f = open(loc, 'r')
+    exceptions = 0
+    while True:
+        line = f.readline()
+        if not line:
+            break
+        if len(line) < 1:
+            continue
+        # Remove Punctuations
+        # Should I handle with 'd -> ed???
+        line = line.translate(table).lower().rstrip()
+        line = line.split(" ")
+        for elem in line:
+            if elem == "":
+                continue
+            try:
+                res.append(wordEmb[elem])
+            except:
+                # logger.PrintDebug("Word not found! %s"%elem,col="r")
+                res.append(np.zeros(emb_size))
+                exceptions += 1
+    f.close()
+    r = np.array(res)
+    logger.PrintDebug("Excepted word count : %d"%exceptions, col="r")
+    logger.PrintDebug("Loaded word size : %s"%(str(r.shape)), col="g")
+    return r
 
 if __name__ == "__main__":
     logger.PrintDebug("Simple RNN Network Training",col='b')
@@ -69,45 +86,35 @@ if __name__ == "__main__":
     # np.set_printoptions(threshold=sys.maxsize)
     
     # Download data if not exists
-    locData = "./data_mnist/"
-    url = "http://yann.lecun.com/exdb/mnist/"
-    locTrainLabel = "train-labels-idx1-ubyte.gz"
-    # if not os.path.exists(locData):
-        # os.mkdir(locData)
-    # if not os.path.exists(locData + locTrainLabel):
-        # request.urlretrieve(url + locTrainLabel, locData + locTrainLabel )
+    locData = "./data_tinyshakespeare/"
+    url = "http://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
+    locFile = "input.txt"
+    if not os.path.exists(locData):
+        os.mkdir(locData)
+    if not os.path.exists(locData + locFile):
+        request.urlretrieve(url, locData + locFile)
     logger.PrintDebug("Raw Data file checked", col='g')
 
-    # Load test/train data/labels
-    trainData = LoadData(locData + "train_images", locData + locTrainData)
-    testData = LoadData(locData + "test_images", locData + locTestData)
-    trainLabel = LoadData(locData + "train_labels", locData + locTrainLabel)
-    testLabel = LoadData(locData + "test_labels", locData + locTestLabel)
-    logger.PrintDebug("Data Load Complete", col='g')
-    
+    # Load and Process Data
+    embSize = args.word_embedding_size
+    streamSize = args.sequence_size
+    wordEmb = load.glove6B(sz=embSize)
+    data = Load(locData + locFile, wordEmb, emb_size = embSize)
     
     batchSize = args.batch_size
     learningRate = args.learning_rate
     numEpochs = args.epoch
     
-    numClasses = 10
-    trainDataCount = trainData.shape[0]
-    testDataCount = testData.shape[0]
-    batchCount = trainDataCount // batchSize
+    dataCount = data.shape[0]
+    batchCount = dataCount // embSize
     
     # Configurate model
-    if args.model == "" or args.model == "LeeNetv2":
-        m = LeeNetv2(numClasses, lr=learningRate, dropout=args.dropout, dropout_rate=args.dropout_rate)
-    elif args.model == "LeeNetL":
-        m = LeeNetL(numClasses, lr=learningRate, dropout=args.dropout, dropout_rate=args.dropout_rate)
-    elif args.model == "PANet":
-        m = PANet(numClasses, lr=learningRate, dropout=args.dropout, dropout_rate=args.dropout_rate)
-    else:
-        logger.PrintDebug("ERROR: Unknown Model specification",col='r')
-        sys.exit(0)
+    m = LeeNetR(embSize, 50, embSize, lr=learningRate, dropout=args.dropout, dropout_rate=args.dropout_rate)
 
     # Forward Once for deciding model structure
-    m.Forward(trainData[0:1])
+    tmpData = np.zeros((1,streamSize,embSize))
+    tmpData[0] = data[0:streamSize]
+    m.Forward(tmpData)
     # Print Basic Information
     logger.PrintDebug("   Model Specification   ",col="k", bg='y')
     print(m.StrModelStructure())
@@ -134,9 +141,8 @@ if __name__ == "__main__":
     
     # Training starting!
     logger.PrintDebug("   Training Start!   ", bg='r') 
-    trainIdx = np.arange(trainData.shape[0])
-    batchData = np.zeros((batchSize, trainData.shape[1], trainData.shape[2], trainData.shape[3]))
-    batchLabel = np.zeros(batchSize, dtype=int)
+    trainIdx = np.arange(batchCount) * batchSize
+    batchData = np.zeros((batchSize, streamSize, embSize))
     
     for epoch in range(numEpochs):
         logger.PrintDebug("   Epoch " + str(epoch+1) + "   ", col='k',bg='w') 
@@ -147,19 +153,16 @@ if __name__ == "__main__":
         # Batch Training for SGD
         for batchIdx in range(batchCount):
             for i in range(batchSize):
-                batchData[i] = trainData[trainIdx[i+batchIdx*batchSize]]
-                batchLabel[i] = trainLabel[trainIdx[i+batchIdx*batchSize]]
+                batchData[i] = data[trainIdx[batchIdx]+i]
             
             result = m.Forward(batchData)
-            loss, _ = F.CrossEntropyLossBatch(result, batchLabel)
             
-            answer = F.OneHotVectorBatch(batchLabel) # Get One-hot vector
-            m.Backward(result - answer) # Backward propagation of the error
-            
+            m.Backward(result) # Backward propagation of the error
+            loss = 99
             # sys.exit(0)
             # Print stuff
-            if args.log:
-                logFile.write("%.4f\t"%loss)
+            # if args.log:
+                # logFile.write("%.4f\t"%loss)
             logger.PrintDebug(str("(E%2d/%2d|B%4d/%4d)(%5.1f|%5.1f) Loss : %.3f" \
                     %(epoch+1,numEpochs,batchIdx+1,batchCount, \
                     float(100*(epoch/numEpochs+(batchIdx+1)/batchCount/numEpochs)), \
@@ -168,19 +171,9 @@ if __name__ == "__main__":
         print()
         logger.PrintDebug("   Evaluating   ", col='k',bg='b') 
         # Evaluate data
-        result = m.Forward(testData)
-        confusionMatrix = np.zeros((numClasses, numClasses))
-        for ind, res in enumerate(result):
-            indx = np.where(res == res.max())
-            confusionMatrix[testLabel[ind], indx[0]] += 1
-        logger.PrintDebug("Confusion Matrix")
-        print(confusionMatrix)
-        correct = np.sum(np.diagonal(confusionMatrix))
-        logger.PrintDebug("Test Accuracy %d/%d"%(correct,testLabel.shape[0]))
+        # result = m.Forward(testData)
     if args.log:
-        logFile.write("\nConfusion Matrix\n"+str(confusionMatrix) +"\n\n")
-        logFile.write("Test Accuracy %d/%d\n"%(correct,testLabel.shape[0]))
-
+        pass
 
         logger.PrintDebug("   Epoch " + str(epoch+1) + " Finish   ", col='k',bg='g') 
     logger.PrintDebug("   Training Finish!   ", bg='r')

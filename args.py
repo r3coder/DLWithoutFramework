@@ -18,6 +18,8 @@ def parse():
             help = "Learning rate")
     parser.add_argument("-ws", "--word-embedding-size", type=int, choices=[50,100,200,300],default=300,
             help = "Size of the word embedding vector")
+    parser.add_argument("-ss", "--sequence-size", type=int, default=50,
+            help = "Size of the sequence when training tinyshakespeare")
     parser.add_argument("-d","--dropout", type=str2bool, default=True,
             help = "True if dropout is used at training")
     parser.add_argument("-dr","--dropout-rate", type=float, default=0.5,

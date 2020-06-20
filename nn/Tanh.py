@@ -14,8 +14,8 @@ class Tanh:
         return self.v
     
     def Backward(self, x):
-        return x
-        # return 1.0 - np.square(np.tanh(x))
+        # return x
+        return np.multiply((1 - np.tanh(x)),(1 + np.tanh(x)))
     
     def Info(self):
         return "[ ]Tanh %s"%(str(self.v.shape))
