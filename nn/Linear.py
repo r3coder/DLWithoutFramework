@@ -1,7 +1,7 @@
 import numpy as np
 
 class Linear:
-    def __init__(self, in_channels, out_channels, lr=0.0001, dropout=True, dropout_ratio = 0.5):
+    def __init__(self, in_channels, out_channels, lr=0.0001, dropout=True, dropout_rate = 0.5):
         # weight and bias
         self.w = np.random.randn(out_channels, in_channels) * np.sqrt(2/(out_channels+in_channels))
         self.b = np.zeros(out_channels)
@@ -13,8 +13,8 @@ class Linear:
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.isTrainable = True
-        self.isDropout = True
-        self.dropout_ratio = 0.5
+        self.isDropout = dropout
+        self.dropout_rate = dropout_rate
 
     def Forward(self, x):
         self.c = x
@@ -37,7 +37,7 @@ class Linear:
         # Dropout
         if self.isDropout:
             d = np.zeros(self.in_channels*self.out_channels)
-            d[:int(self.in_channels*self.out_channels*self.dropout_ratio)] = 1
+            d[:int(self.in_channels*self.out_channels*self.dropout_rate)] = 1
             np.random.shuffle(d)
             d = np.reshape(d,(self.out_channels, self.in_channels))
             self.w -= np.multiply(grad / x.shape[0], d)

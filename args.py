@@ -8,7 +8,7 @@ def str2bool(v):
 def parse():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-d","--download", type=str2bool, default=False,
+    parser.add_argument("-dl","--download", type=str2bool, default=False,
             help = "Download Data if true. Data will download if verifing fails")
     parser.add_argument("-e","--epoch", type=int, default=10,
             help = "Training epochs")
@@ -18,6 +18,10 @@ def parse():
             help = "Learning rate")
     parser.add_argument("-ws", "--word-embedding-size", type=int, choices=[50,100,200,300],default=300,
             help = "Size of the word embedding vector")
+    parser.add_argument("-d","--dropout", type=str2bool, default=True,
+            help = "True if dropout is used at training")
+    parser.add_argument("-dr","--dropout-rate", type=float, default=0.5,
+            help = "Dropout rate")
     parser.add_argument("-l","--log", type=str2bool, default=False,
             help = "Left log file if true. It is saved on ./logs/") 
     parser.add_argument("-m","--model", type=str, default = "",

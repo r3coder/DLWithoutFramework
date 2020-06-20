@@ -1,7 +1,7 @@
 import numpy as np
 
 class Conv2d:
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=1, padding_mode='zeros', lr = 0.001, dropout=True, dropout_ratio = 0.5):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=1, padding_mode='zeros', lr = 0.001, dropout=True, dropout_rate = 0.5):
 
         # kernel and bias
         self.k = np.random.randn(out_channels, in_channels,kernel_size[0], kernel_size[1]) * np.sqrt(2/(out_channels*kernel_size[0]*kernel_size[1]))
@@ -21,7 +21,7 @@ class Conv2d:
         self.lr = lr
         self.isTrainable = True
         self.isDropout = dropout
-        self.dropout_ratio = dropout_ratio
+        self.dropout_rate = dropout_rate
 
 
     def Forward(self, x):
@@ -57,7 +57,7 @@ class Conv2d:
         # Dropout
         if self.isDropout:
             dx = np.zeros(self.out_channels*self.in_channels)
-            dx[:int(self.out_channels*self.in_channels*self.dropout_ratio)] = 1
+            dx[:int(self.out_channels*self.in_channels*self.dropout_rate)] = 1
             np.random.shuffle(dx)
             dx = np.reshape(dx,(self.out_channels,self.in_channels))
             d = np.zeros(self.k.shape)

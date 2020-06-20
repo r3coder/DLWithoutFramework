@@ -55,21 +55,21 @@ class LeeNetL:
 
 # LeeNetv2 : At Least WORKING model for mnist
 class LeeNetv2:
-    def __init__(self, output_size, lr=0.005):
+    def __init__(self, output_size, lr=0.005, dropout=True, dropout_rate=0.5):
         self.cf = []
-        self.cf.append(Conv2d(1,4,(3,3),lr=lr))
+        self.cf.append(Conv2d(1,4,(3,3),lr=lr,dropout=dropout,dropout_rate=dropout_rate))
         self.cf.append(ReLU())
         self.cf.append(MaxPool2d())
-        self.cf.append(Conv2d(4,8,(3,3),lr=lr))
+        self.cf.append(Conv2d(4,8,(3,3),lr=lr,dropout=dropout,dropout_rate=dropout_rate))
         self.cf.append(ReLU())
         self.cf.append(Flatten())
-        self.cf.append(Linear(784*2,1000,lr=lr))
+        self.cf.append(Linear(784*2,1000,lr=lr,dropout=dropout,dropout_rate=dropout_rate))
         self.cf.append(ReLU())
-        self.cf.append(Linear(1000,500,lr=lr))
+        self.cf.append(Linear(1000,500,lr=lr,dropout=dropout,dropout_rate=dropout_rate))
         self.cf.append(ReLU())
-        self.cf.append(Linear(500,256,lr=lr))
+        self.cf.append(Linear(500,256,lr=lr,dropout=dropout,dropout_rate=dropout_rate))
         self.cf.append(ReLU())
-        self.cf.append(Linear(256,10,lr=lr))
+        self.cf.append(Linear(256,10,lr=lr,dropout=dropout,dropout_rate=dropout_rate))
         self.cf.append(Softmax())
 
     def Forward(self, input_image):
@@ -94,31 +94,32 @@ class LeeNetv2:
             a += "%s"%(self.cf[i].Info()) + "\n"
         return a
 
-# LeeNetv3 : Not that working, but structure is given by assignment
-class Model:
-    def __init__(self, output_size, lr=0.0001):
+# PANet : Not that working, but structure is given by assignment
+class PANet:
+    def __init__(self, output_size, lr=0.0001, dropout=True, dropout_rate=0.5):
         self.cnn = []
-        self.cnn.append(Conv2d(1,4,(3,3),lr=lr))    
+        self.cnn.append(Conv2d(1,4,(3,3),lr=lr,dropout=dropout,dropout_rate=dropout_rate))    
         self.cnn.append(ReLU())                     
         self.cnn.append(MaxPool2d())                
-        self.cnn.append(Conv2d(4,8,(3,3),lr=lr))    
+        self.cnn.append(Conv2d(4,8,(3,3),lr=lr,dropout=dropout,dropout_rate=dropout_rate))    
         self.cnn.append(ReLU())                     
         self.cnn.append(MaxPool2d())                
-        self.cnn.append(Conv2d(8,16,(3,3),lr=lr))   
+        self.cnn.append(Conv2d(8,16,(3,3),lr=lr,dropout=dropout,dropout_rate=dropout_rate))   
         self.cnn.append(ReLU())                     
-        self.cnn.append(Conv2d(16,16,(3,3),lr=lr))        
+        self.cnn.append(Conv2d(16,16,(3,3),lr=lr,dropout=dropout,dropout_rate=dropout_rate))        
         self.cnn.append(ReLU())                     
-        self.cnn.append(Conv2d(16,24,(3,3),lr=lr))        
-        self.cnn.append(Tanh())                     
+        self.cnn.append(Conv2d(16,24,(3,3),lr=lr,dropout=dropout,dropout_rate=dropout_rate))        
+        self.cnn.append(ReLU())                     
 
         self.cf = []
         self.cf.append(Concat())
         self.cf.append(Flatten())
-        self.cf.append(Linear(1960,1000,lr=lr))
+        self.cf.append(Tanh())
+        self.cf.append(Linear(1960,1000,lr=lr,dropout=dropout,dropout_rate=dropout_rate))
         self.cf.append(ReLU())
-        self.cf.append(Linear(1000,500,lr=lr))
+        self.cf.append(Linear(1000,500,lr=lr,dropout=dropout,dropout_rate=dropout_rate))
         self.cf.append(ReLU())
-        self.cf.append(Linear(500,10,lr=lr))
+        self.cf.append(Linear(500,10,lr=lr,dropout=dropout,dropout_rate=dropout_rate))
         self.cf.append(Softmax())
 
         self.lr = lr
@@ -137,6 +138,17 @@ class Model:
         for i in range(len(self.cf)-1, 0, -1):
             error = self.cf[i].Backward(error)
         error, error2 = self.cf[0].Backward(error)
+    
+    def StrModelName(self):
+        return "PANet"
+
+    def StrModelStructure(self):
+        a = ""
+        for i in range(len(self.cnn)):
+            a += "%s"%(self.cnn[i].Info()) + "\n"
+        for i in range(len(self.cf)):
+            a += "%s"%(self.cf[i].Info()) + "\n"
+        return a
 
 import gzip
 import os
@@ -238,9 +250,11 @@ if __name__ == "__main__":
     
     # Configurate model
     if args.model == "" or args.model == "LeeNetv2":
-        m = LeeNetv2(numClasses, lr=learningRate)
+        m = LeeNetv2(numClasses, lr=learningRate, dropout=args.dropout, dropout_rate=args.dropout_rate)
     elif args.model == "LeeNetL":
-        m = LeeNetL(numClasses, lr=learningRate)
+        m = LeeNetL(numClasses, lr=learningRate, dropout=args.dropout, dropout_rate=args.dropout_rate)
+    elif args.model == "PANet":
+        m = PANet(numClasses, lr=learningRate, dropout=args.dropout, dropout_rate=args.dropout_rate)
     else:
         logger.PrintDebug("ERROR: Unknown Model specification",col='r')
         sys.exit(0)
@@ -296,7 +310,6 @@ if __name__ == "__main__":
             m.Backward(result - answer) # Backward propagation of the error
             
             # sys.exit(0)
-            
             # Print stuff
             if args.log:
                 logFile.write("%.4f\t"%loss)
@@ -312,7 +325,7 @@ if __name__ == "__main__":
         confusionMatrix = np.zeros((numClasses, numClasses))
         for ind, res in enumerate(result):
             indx = np.where(res == res.max())
-            confusionMatrix[testLabel[ind], indx[1]] += 1
+            confusionMatrix[testLabel[ind], indx[0]] += 1
         logger.PrintDebug("Confusion Matrix")
         print(confusionMatrix)
         correct = np.sum(np.diagonal(confusionMatrix))

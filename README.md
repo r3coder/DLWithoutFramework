@@ -31,6 +31,7 @@ Etc Layers
 ## Files
  - `main.py` : main network execution
  - `main_cnn.py` : partial network (CNN) execution. It trains simple mnist
+ - `main_rnn.py` : partial network (RNN) execution.
  - `load.py` : Loading Flickr8k, glove6B
  - `args.py` : Parsing arguments
  - `image.py` : Image augmentation
