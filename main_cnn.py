@@ -153,6 +153,7 @@ class PANet:
 import gzip
 import os
 import sys
+import random
 from urllib import request
 
 
@@ -273,7 +274,7 @@ if __name__ == "__main__":
 
     # Log file
     if args.log:
-        modelName = m.StrModelName()
+        modelName = m.StrModelName() + "_%04d"%random.randint(0,9999)
         locLogFile = "./logs/log_" + modelName + ".txt"
         if not os.path.exists("./logs"):
             os.mkdir("./logs")

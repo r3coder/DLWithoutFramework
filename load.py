@@ -2,11 +2,11 @@ import numpy as np
 from PIL import Image
 from log import logger
 
+from urllib import request
+import zipfile
+import os
 
 def Download():
-    from urllib import request
-    import zipfile
-    import os
 
     # Delete existing file
     logger.PrintDebug("Clearing Folder...")
@@ -38,6 +38,13 @@ def Download():
         zr.extractall("data/Flickr8k/")
     os.remove(p)
 
+    DownloadGlove6B()
+
+def DownloadGlove6B():
+    # Create directory if not exists
+    if not os.path.exists("./data/"):
+        os.mkdir("./data/")
+    
     logger.PrintDebug("Downloading glove6B...")
     p = "./data/glove6B.zip"
     request.urlretrieve(" http://nlp.stanford.edu/data/glove.6B.zip", p)

@@ -44,6 +44,25 @@ import sys
 from urllib import request
 import load
 import string
+import random
+
+# Find original word from word embedding vector
+def FindOriginalWord(wordEmb, ov):
+    minVal = 9999
+    minWord = ""
+    for key in wordEmb.keys():
+        isNormalWord = True
+        for pun in string.punctuation:
+            if pun in key:
+                isNormalWord = False
+                break
+        if not isNormalWord:
+            continue
+        v = np.sum(np.absolute(np.subtract(ov,wordEmb[key])))
+        if v < minVal:
+            minVal = v
+            minWord = key
+    return minWord, minVal
 
 def Load(loc, wordEmb, emb_size = 50):
     res = []
@@ -58,7 +77,7 @@ def Load(loc, wordEmb, emb_size = 50):
             continue
         # Remove Punctuations
         # Should I handle with 'd -> ed???
-        line = line.translate(table).lower().rstrip()
+        line = line.replace("'d","ed").translate(table).lower().rstrip()
         line = line.split(" ")
         for elem in line:
             if elem == "":
@@ -98,6 +117,8 @@ if __name__ == "__main__":
     # Load and Process Data
     embSize = args.word_embedding_size
     streamSize = args.sequence_size
+    if args.download: # Please download Glove6B First to use dataset
+        load.DownloadGlove6B()
     wordEmb = load.glove6B(sz=embSize)
     data = Load(locData + locFile, wordEmb, emb_size = embSize)
     
@@ -122,12 +143,12 @@ if __name__ == "__main__":
     print("Batch Size : %d"%batchSize)
     print("Learning Rate : %f"%learningRate)
     print("numEpochs : %d"%args.epoch)
-    print("Training Data : MNIST")
+    print("Training Data : tinyshakespeare")
     print()
 
     # Log file
     if args.log:
-        modelName = m.StrModelName()
+        modelName = m.StrModelName() + "_%04d"%random.randint(0,9999)
         locLogFile = "./logs/log_" + modelName + ".txt"
         if not os.path.exists("./logs"):
             os.mkdir("./logs")
@@ -138,7 +159,7 @@ if __name__ == "__main__":
         logFile.write(m.StrModelName() + "\n")
         logFile.write(m.StrModelStructure() + "\n")
         logFile.write("Start time : " + (logger.GetCurrentTime()) + "\n\n")
-    
+
     # Training starting!
     logger.PrintDebug("   Training Start!   ", bg='r') 
     trainIdx = np.arange(batchCount) * batchSize
@@ -158,22 +179,35 @@ if __name__ == "__main__":
             result = m.Forward(batchData)
             
             m.Backward(result) # Backward propagation of the error
-            loss = 99
             # sys.exit(0)
             # Print stuff
-            # if args.log:
-                # logFile.write("%.4f\t"%loss)
-            logger.PrintDebug(str("(E%2d/%2d|B%4d/%4d)(%5.1f|%5.1f) Loss : %.3f" \
+            logger.PrintDebug(str("(E%2d/%2d|B%4d/%4d)(%5.1f|%5.1f)" \
                     %(epoch+1,numEpochs,batchIdx+1,batchCount, \
                     float(100*(epoch/numEpochs+(batchIdx+1)/batchCount/numEpochs)), \
-                    float(100*(batchIdx+1)/batchCount), loss)),end = '\r') 
-            # print()    
+                    float(100*(batchIdx+1)/batchCount))),end = '\r') 
         print()
         logger.PrintDebug("   Evaluating   ", col='k',bg='b') 
-        # Evaluate data
-        # result = m.Forward(testData)
-    if args.log:
-        pass
+        testLength = 20
+        testCount = 3
+        for ti in range(testCount):
+            td = np.zeros((1,testLength,embSize))
+            td[0,0] = data[random.randint(0,dataCount)]
+            for ix in range(1,testLength):
+                td[0,ix] = m.Forward(td[:,:ix,:])
+            resWord = []
+            resError = []
+            for ix in range(testLength):
+                t1, t2 = FindOriginalWord(wordEmb,td[0,ix,:])
+                resWord.append(t1)
+                resError.append(t2)
+            print("Sequence Starts with %s"%resWord[0])
+            print(resWord)
+            print(np.array(resError))
+            if args.log:
+                logFile.write("\nEpoch %d\n\n"%(epoch+1))
+                logFile.write("Sequence Starts with %s"%resWord[0])
+                logFile.write(str(resWord))         
+                logFile.write(str(resError))   
 
         logger.PrintDebug("   Epoch " + str(epoch+1) + " Finish   ", col='k',bg='g') 
     logger.PrintDebug("   Training Finish!   ", bg='r')
