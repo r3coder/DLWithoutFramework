@@ -1,10 +1,7 @@
-# AIGO
-AIGO is deep learning framework based on golang
+# IC670 Deep Learning Final Programming Assignment
 
 **DISCLAIMER**
 This project may contains enormous amount of bugs. If you want to use this repo, please be aware...
-
-IC670 Deep Learning Final Programming Assignment
 
 ## Purpose of this project
 Design a image-captioning network WITHOUT A FRAMEWORK
